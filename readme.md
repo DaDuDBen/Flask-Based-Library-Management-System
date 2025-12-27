@@ -122,16 +122,7 @@ http://127.0.0.1:5000
 
 ---
 
-## Future Enhancements
-
-* REST API for mobile/frontend apps
-* Automated unit tests (pytest)
-* Deployment on Render / Railway
-* Docker support
-* Email notifications
-
----
-
 ## License
 
 This project is for educational purposes.
+
