@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin</title>
+    <title>Admin Dashboard | LibraryHub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-body-tertiary">
@@ -11,8 +11,8 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h2 class="fw-bold mb-0">Admin Dashboard</h2>
-        <small class="text-muted">Manage books and monitor borrowing activity.</small>
+        <h2 class="fw-bold mb-0">Library Control Center</h2>
+        <small class="text-muted">Track inventory, members, and borrowing health in one view.</small>
     </div>
     <a href="/logout" class="btn btn-outline-danger">Logout</a>
 </div>
@@ -28,35 +28,44 @@
     {% endif %}
 {% endwith %}
 
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><small class="text-muted">Books</small><h4>{{ stats.total_books }}</h4></div></div></div>
+    <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><small class="text-muted">Available</small><h4 class="text-success">{{ stats.available_books }}</h4></div></div></div>
+    <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><small class="text-muted">Borrowed</small><h4 class="text-warning-emphasis">{{ stats.borrowed_books }}</h4></div></div></div>
+    <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><small class="text-muted">Members</small><h4 class="text-primary">{{ stats.members }}</h4></div></div></div>
+    <div class="col-sm-6 col-xl-4"><div class="card border-0 shadow-sm"><div class="card-body"><small class="text-muted">Total fines collected</small><h4 class="text-danger">₹{{ stats.total_fines }}</h4></div></div></div>
+</div>
+
 <div class="card border-0 shadow-sm rounded-4 mb-4">
     <div class="card-body p-4">
         <h5 class="fw-semibold mb-3">Add a New Book</h5>
         <form class="row g-2" method="POST" action="/admin/add">
-            <div class="col-md">
-                <input class="form-control" name="title" placeholder="Title" required>
-            </div>
-            <div class="col-md">
-                <input class="form-control" name="author" placeholder="Author" required>
-            </div>
-            <div class="col-md-2 d-grid">
-                <button class="btn btn-success">Add Book</button>
-            </div>
+            <div class="col-md"><input class="form-control" name="title" placeholder="Title" required></div>
+            <div class="col-md"><input class="form-control" name="author" placeholder="Author" required></div>
+            <div class="col-md-2 d-grid"><button class="btn btn-success">Add Book</button></div>
         </form>
     </div>
 </div>
 
 <div class="card border-0 shadow-sm rounded-4 mb-4">
     <div class="card-body p-4">
-        <h5 class="fw-semibold mb-3">Books</h5>
+        <h5 class="fw-semibold mb-3">Book Inventory</h5>
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-7"><input class="form-control" name="q" value="{{ q }}" placeholder="Search by title or author"></div>
+            <div class="col-md-3">
+                <select class="form-select" name="status">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All statuses</option>
+                    <option value="available" {% if status_filter == 'available' %}selected{% endif %}>Available</option>
+                    <option value="borrowed" {% if status_filter == 'borrowed' %}selected{% endif %}>Borrowed</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-primary">Apply</button></div>
+        </form>
+
         <div class="table-responsive">
             <table class="table table-striped align-middle mb-0">
-            <tr>
-                <th>Title</th>
-                <th>Author</th>
-                <th>Status</th>
-                <th>Borrowed By</th>
-                <th>Action</th>
-            </tr>
+            <thead><tr><th>Title</th><th>Author</th><th>Status</th><th>Borrowed By</th><th>Action</th></tr></thead>
+            <tbody>
             {% for b in books %}
             <tr>
                 <td>{{ b.title }}</td>
@@ -68,12 +77,13 @@
                         <span class="badge bg-warning-subtle text-warning-emphasis">Borrowed</span>
                     {% endif %}
                 </td>
-                <td>{{ b.borrowed_by or "-" }}</td>
-                <td>
-                    <a href="/admin/delete/{{ b.id }}" class="btn btn-outline-danger btn-sm">Delete</a>
-                </td>
+                <td>{{ user_lookup.get(b.borrowed_by, '-') if b.borrowed_by else '-' }}</td>
+                <td><a href="/admin/delete/{{ b.id }}" class="btn btn-outline-danger btn-sm">Delete</a></td>
             </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-4">No books matched your filters.</td></tr>
             {% endfor %}
+            </tbody>
             </table>
         </div>
     </div>
@@ -84,32 +94,28 @@
         <h5 class="fw-semibold mb-3">Borrow History &amp; Fines</h5>
         <div class="table-responsive">
             <table class="table table-bordered align-middle mb-0">
+            <thead><tr><th>User</th><th>Book</th><th>Borrowed</th><th>Due</th><th>Returned</th><th>Late</th><th>Fine (₹)</th></tr></thead>
+            <tbody>
+            {% for row in history_rows %}
             <tr>
-                <th>User</th>
-                <th>Book</th>
-                <th>Borrowed</th>
-                <th>Due</th>
-                <th>Returned</th>
-                <th>Late</th>
-                <th>Fine (₹)</th>
-            </tr>
-            {% for h in history %}
-            <tr>
-                <td>{{ h.user_id }}</td>
-                <td>{{ h.book_id }}</td>
-                <td>{{ h.borrow_date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ h.due_date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ h.return_date.strftime('%Y-%m-%d') if h.return_date else '-' }}</td>
+                <td>{{ row.username }}</td>
+                <td>{{ row.book_title }}</td>
+                <td>{{ row.entry.borrow_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ row.entry.due_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ row.entry.return_date.strftime('%Y-%m-%d') if row.entry.return_date else '-' }}</td>
                 <td>
-                    {% if h.is_late %}
-                    <span class="badge bg-danger">Yes</span>
+                    {% if row.entry.is_late %}
+                        <span class="badge bg-danger">Yes</span>
                     {% else %}
-                    <span class="badge bg-success">No</span>
+                        <span class="badge bg-success">No</span>
                     {% endif %}
                 </td>
-                <td>{{ h.fine_amount }}</td>
+                <td>{{ row.entry.fine_amount }}</td>
             </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No borrow history yet.</td></tr>
             {% endfor %}
+            </tbody>
             </table>
         </div>
     </div>
