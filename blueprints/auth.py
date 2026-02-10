@@ -1,37 +1,57 @@
-from flask import Blueprint, render_template, request, redirect, session
+from flask import Blueprint, render_template, request, redirect, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 from models import User
 
 auth_bp = Blueprint("auth", __name__)
 
+
 @auth_bp.route("/", methods=["GET", "POST"])
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        user = User.query.filter_by(username=request.form["username"]).first()
-        if user and check_password_hash(user.password_hash, request.form["password"]):
+        username = request.form["username"].strip()
+        password = request.form["password"]
+        user = User.query.filter_by(username=username).first()
+
+        if not user:
+            flash("We couldn't find that username. Please try again.", "danger")
+        elif not check_password_hash(user.password_hash, password):
+            flash("That password didn't match. Try again.", "danger")
+        else:
             session["user_id"] = user.id
             session["role"] = user.role
+            flash(f"Welcome back, {user.username}!", "success")
             return redirect("/admin" if user.role == "admin" else "/user")
+
     return render_template("login.html")
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        if not User.query.filter_by(username=request.form["username"]).first():
+        username = request.form["username"].strip()
+        password = request.form["password"]
+
+        if not username or not password:
+            flash("Please enter both a username and password.", "danger")
+        elif User.query.filter_by(username=username).first():
+            flash("That username is already taken. Please choose another one.", "warning")
+        else:
             db.session.add(User(
-                username=request.form["username"],
-                password_hash=generate_password_hash(request.form["password"]),
+                username=username,
+                password_hash=generate_password_hash(password),
                 role="user"
             ))
             db.session.commit()
+            flash("Your account has been created. You can log in now.", "success")
             return redirect("/login")
+
     return render_template("register.html")
 
 
 @auth_bp.route("/logout")
 def logout():
     session.clear()
+    flash("You have been logged out.", "info")
     return redirect("/login")

@@ -1,81 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-<div class="container mt-4">
+<body class="bg-body-tertiary">
+<div class="container py-4">
 
-<div class="d-flex justify-content-between">
-    <h2>Admin Dashboard</h2>
-    <a href="/logout" class="btn btn-danger">Logout</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="fw-bold mb-0">Admin Dashboard</h2>
+        <small class="text-muted">Manage books and monitor borrowing activity.</small>
+    </div>
+    <a href="/logout" class="btn btn-outline-danger">Logout</a>
 </div>
 
-<form class="row mt-3" method="POST" action="/admin/add">
-    <div class="col">
-        <input class="form-control" name="title" placeholder="Title" required>
-    </div>
-    <div class="col">
-        <input class="form-control" name="author" placeholder="Author" required>
-    </div>
-    <div class="col">
-        <button class="btn btn-success w-100">Add Book</button>
-    </div>
-</form>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
 
-<h4 class="mt-4">Books</h4>
-<table class="table table-striped">
-<tr>
-    <th>Title</th>
-    <th>Author</th>
-    <th>Status</th>
-    <th>Borrowed By</th>
-    <th>Action</th>
-</tr>
-{% for b in books %}
-<tr>
-    <td>{{ b.title }}</td>
-    <td>{{ b.author }}</td>
-    <td>{{ b.status }}</td>
-    <td>{{ b.borrowed_by or "-" }}</td>
-    <td>
-        <a href="/admin/delete/{{ b.id }}" class="btn btn-danger btn-sm">Delete</a>
-    </td>
-</tr>
-{% endfor %}
-</table>
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <h5 class="fw-semibold mb-3">Add a New Book</h5>
+        <form class="row g-2" method="POST" action="/admin/add">
+            <div class="col-md">
+                <input class="form-control" name="title" placeholder="Title" required>
+            </div>
+            <div class="col-md">
+                <input class="form-control" name="author" placeholder="Author" required>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-success">Add Book</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-<h4 class="mt-5">Borrow History & Fines</h4>
-<table class="table table-bordered">
-<tr>
-    <th>User</th>
-    <th>Book</th>
-    <th>Borrowed</th>
-    <th>Due</th>
-    <th>Returned</th>
-    <th>Late</th>
-    <th>Fine (₹)</th>
-</tr>
-{% for h in history %}
-<tr>
-    <td>{{ h.user_id }}</td>
-    <td>{{ h.book_id }}</td>
-    <td>{{ h.borrow_date.strftime('%Y-%m-%d') }}</td>
-    <td>{{ h.due_date.strftime('%Y-%m-%d') }}</td>
-    <td>{{ h.return_date.strftime('%Y-%m-%d') if h.return_date else '-' }}</td>
-    <td>
-        {% if h.is_late %}
-        <span class="badge bg-danger">Yes</span>
-        {% else %}
-        <span class="badge bg-success">No</span>
-        {% endif %}
-    </td>
-    <td>{{ h.fine_amount }}</td>
-</tr>
-{% endfor %}
-</table>
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <h5 class="fw-semibold mb-3">Books</h5>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Status</th>
+                <th>Borrowed By</th>
+                <th>Action</th>
+            </tr>
+            {% for b in books %}
+            <tr>
+                <td>{{ b.title }}</td>
+                <td>{{ b.author }}</td>
+                <td>
+                    {% if b.status == 'Available' %}
+                        <span class="badge bg-success-subtle text-success">Available</span>
+                    {% else %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis">Borrowed</span>
+                    {% endif %}
+                </td>
+                <td>{{ b.borrowed_by or "-" }}</td>
+                <td>
+                    <a href="/admin/delete/{{ b.id }}" class="btn btn-outline-danger btn-sm">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+        <h5 class="fw-semibold mb-3">Borrow History &amp; Fines</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+            <tr>
+                <th>User</th>
+                <th>Book</th>
+                <th>Borrowed</th>
+                <th>Due</th>
+                <th>Returned</th>
+                <th>Late</th>
+                <th>Fine (₹)</th>
+            </tr>
+            {% for h in history %}
+            <tr>
+                <td>{{ h.user_id }}</td>
+                <td>{{ h.book_id }}</td>
+                <td>{{ h.borrow_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ h.due_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ h.return_date.strftime('%Y-%m-%d') if h.return_date else '-' }}</td>
+                <td>
+                    {% if h.is_late %}
+                    <span class="badge bg-danger">Yes</span>
+                    {% else %}
+                    <span class="badge bg-success">No</span>
+                    {% endif %}
+                </td>
+                <td>{{ h.fine_amount }}</td>
+            </tr>
+            {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
 
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
